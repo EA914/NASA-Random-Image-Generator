@@ -1,10 +1,17 @@
 import os
 import requests
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
-def fetch_and_save_image():
+def generate_unique_date(start_date, end_date, generated_dates):
+	while True:
+		random_date = start_date + timedelta(days=random.randint(0, (end_date - start_date).days))
+		if random_date not in generated_dates:
+			generated_dates.add(random_date)
+			return random_date
+
+def fetch_and_save_image(generated_dates):
 	print("Fetching image...")
 
 	# Load environment variables
@@ -13,10 +20,10 @@ def fetch_and_save_image():
 	# Get the NASA API key from the environment variable
 	nasa_api_key = os.getenv('NASA_API_KEY')
 
-	# Generate a random date between 2022-01-01 and today's date
+	# Generate a unique random date between 2022-01-01 and today's date
 	start_date = datetime(2022, 1, 1)
 	end_date = datetime.now()
-	random_date = start_date + (end_date - start_date) * random.random()
+	random_date = generate_unique_date(start_date, end_date, generated_dates)
 	formatted_date = random_date.strftime('%Y-%m-%d')
 
 	# Define the URL for the APOD (Astronomy Picture of the Day) endpoint with the random date
@@ -54,6 +61,12 @@ def fetch_and_save_image():
 				with open(filename, 'wb') as image_file:
 					image_file.write(image_response.content)
 				print(f"Done. Image saved as '{filename}'")
+
+				# Get the absolute path of the image file
+				abs_filename = os.path.abspath(filename)
+
+				# Open the image in the default file viewer
+				os.startfile(abs_filename)
 			else:
 				print("Error downloading the image")
 		else:
@@ -62,8 +75,9 @@ def fetch_and_save_image():
 		print("Error fetching the APOD data")
 
 def main():
+	generated_dates = set()
 	while True:
-		fetch_and_save_image()
+		fetch_and_save_image(generated_dates)
 		answer = input("Would you like to generate another image? (Y/N): ").strip().upper()
 		if answer != 'Y':
 			break
