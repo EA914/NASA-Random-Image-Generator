@@ -1,5 +1,8 @@
 import os
 import requests
+import piexif
+from PIL import Image
+from io import BytesIO
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import random
@@ -62,17 +65,44 @@ def fetch_and_save_image(generated_dates):
 					image_file.write(image_response.content)
 				print(f"Done. Image saved as '{filename}'")
 
-				# Get the absolute path of the image file
-				abs_filename = os.path.abspath(filename)
+				# Get the title from the response
+				title = apod_data.get('title', 'No Title')
 
-				# Open the image in the default file viewer
-				os.startfile(abs_filename)
+				# Add the title to the image
+				add_title_to_image(filename, title)
+
 			else:
 				print("Error downloading the image")
 		else:
 			print("Image URL not found in the response")
 	else:
 		print("Error fetching the APOD data")
+
+def add_title_to_image(filename, title):
+	try:
+		# Open the image file
+		with open(filename, 'rb') as f:
+			image_data = f.read()
+
+		# Create a BytesIO object from the image data
+		image_io = BytesIO(image_data)
+
+		# Open the image using PIL
+		image = Image.open(image_io)
+
+		# Check if the image has EXIF data
+		if 'exif' in image.info:
+			# Add the title to the EXIF data
+			exif_dict = piexif.load(image.info['exif'])
+			exif_dict['0th'][piexif.ImageIFD.ImageDescription] = title.encode('utf-8')
+			exif_bytes = piexif.dump(exif_dict)
+			image.save(filename, exif=exif_bytes)
+			print("Title added to image successfully.")
+		else:
+			print("Image format does not support EXIF data.")
+
+	except Exception as e:
+		print(f"Error adding title to image: {e}")
 
 def main():
 	generated_dates = set()
